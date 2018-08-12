@@ -3,6 +3,7 @@
 #include <iostream>
 #include "json.hpp"
 #include "PID.h"
+#include "Twiddle.h"
 #include <math.h>
 #include <fstream>
 #include <sstream>
@@ -35,45 +36,37 @@ std::string hasData(std::string s) {
   return "";
 }
 
-int step_count = 0;
+
+// Sending a RESET signal to the simulator
+void resetSimulator(uWS::WebSocket<uWS::SERVER> &ws) {
+
+  std::string msg = "42[\"reset\",{}]";
+  ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
+}
+
 
 int main(int argc, char* argv[]) {
 
   uWS::Hub h;
 
-  PID pid;
-
-  double debug = argc > 1 && (std::string(argv[1]) == "-t" || std::string(argv[1]) == "--twiddle");
-
-  // TODO: Initialize the pid variable.
-  // pid.Init(0.2, 0.0001, 4.0);
-  // pid.Init(0.08, 0.000005, 2.8); // so-so
-  // pid.Init(0.08, 0.000005, 2.8); // so-so
-  double Kp = 0.05;
-  double Ki = 0.00001;
-  double Kd = 1.0;
-  pid.Init(Kp, Ki, Kd);
-
-  // writing the CTE, steering and throttle values in a CSV file in debug mode
-  std::ofstream pid_values;
-  if ( debug ) {
-
-      // assembling the filename. it has the following structure: PID_<date>_<time>_<Kp>_<Ki>_<Kd>.csv
-      std::stringstream filename;
-      time_t curr_time;
-      char datetime_buffer[20];
-      time(&curr_time);
-      strftime(datetime_buffer, 20, "%Y%m%d_%H%M%S", localtime(&curr_time));
-      filename << "PID_" << std::string(datetime_buffer) << "_" << Kp << "_" << Ki << "_" << Kd << ".csv";
-      std::cout << "Filename: " << filename.str() << std::endl;
-
-      pid_values.open(filename.str().c_str(), std::ios_base::out | std::ios_base::app);
-      pid_values << "CTE,steering,throttle" << std::endl;
-      // pid_values.close();
+  bool do_twiddling = argc > 1 && (std::string(argv[1]) == "-t" || std::string(argv[1]) == "--twiddle");
+  if ( do_twiddling ) {
+    std::cout << "Twiddle has been activated." << std::endl;
   }
 
+  // initialize the P, I and D coefficients
+  double Kp = 0.1;
+  double Ki = 0.00001;
+  double Kd = 1.0;
 
-  h.onMessage([&pid, &pid_values](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
+  // the PID variable will be initialized implicitly by the twiddler (regardless of whether we'll
+  // do the twiddling or not)  
+  PID pid;
+  Twiddle twiddle = Twiddle(do_twiddling, Kp, Ki, Kd);
+  twiddle.Init(pid);
+
+  h.onMessage([&pid, &twiddle](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
+
     // "42" at the start of the message means there's a websocket message event.
     // The 4 signifies a websocket message
     // The 2 signifies a websocket event
@@ -81,6 +74,7 @@ int main(int argc, char* argv[]) {
 
       auto s = hasData(std::string(data).substr(0, length));
       if (s != "") {
+
         auto j = json::parse(s);
         std::string event = j[0].get<std::string>();
         if (event == "telemetry") {
@@ -93,26 +87,33 @@ int main(int argc, char* argv[]) {
           double steering;
           double throttle;
 
-          /*
-          * TODO: Calcuate steering value here, remember the steering value is
-          * [-1, 1].
-          * NOTE: Feel free to play around with the throttle and speed. Maybe use
-          * another PID controller to control the speed!
-          */
+          std::cout << "cte: " << cte << "  step " << twiddle.step_count << std::endl;
+
+          // classic PID processing steps
           pid.UpdateError(cte);
-          steering = pid.CalculateSteering(speed, angle, cte);
-          // throttle = pid.CalculateThrottle(speed, angle, cte);
-          throttle = 0.3;
+          steering = pid.CalculateSteering(cte);
+          throttle = pid.CalculateThrottle(cte);
 
-          // DEBUG
-          if ( pid_values.is_open() ) {
-            pid_values << cte << "," << steering << "," << throttle << std::endl;
+          // DEBUG!!!
+          steering = -1.0;
+
+          // we have other things to do in case twiddling is active
+          if ( twiddle.isActive() ) {
+
+            // breaking the curent twiddle session in case the curent CTE is simply too big
+            if ( std::abs(cte) > Twiddle::CTE_LIMIT ) {
+
+              std::cout << " ** CTE (" << cte << ") over limit; finishing twiddle cycle." << std::endl;
+              twiddle.Init(pid);
+              resetSimulator(ws);
+              return;
+            }
+
+            unsigned int twiddle_result = twiddle.doOneStep(pid);
+            if ( twiddle_result == Twiddle::FINISHED ) {
+
+            }
           }
-
-
-          // DEBUG
-          // std::cout << "CTE: " << cte << " Steering Value: " << steering << std::endl;
-          std::cout << "step: " << ++step_count << std::endl;
 
           json msgJson;
           msgJson["steering_angle"] = steering;

@@ -14,11 +14,12 @@ class PID {
   // Maximal allowed steering angle in radian and speed (in MPH).
   double max_angle;
   double max_speed;
+  double min_speed;
 
   // Total squared error
   double total_squared_error;
 
-  // as the name says: the value of the last calculated steering angle (in radians)
+  // Ss the name says: the value of the last calculated steering angle (in radians)
   double steering;
 
 public:
@@ -63,19 +64,15 @@ public:
 
   /*
    * Calculate the steering value.
-   * @param speed Current speed of the vehicle
-   * @param angle Current angle of the vehicle
    * @param angle Current cross track error value
    */
-  double CalculateSteering(double speed, double angle, double cte);
+  double CalculateSteering(double cte);
 
   /*
    * Calculate throttle.
-   * @param speed Current speed of the vehicle
-   * @param angle Current angle of the vehicle
    * @param angle Current cross track error value
    */
-  double CalculateThrottle(double speed, double angle, double cte);
+  double CalculateThrottle(double cte);
 };
 
 #endif /* PID_H */
