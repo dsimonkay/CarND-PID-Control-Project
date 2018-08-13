@@ -44,14 +44,12 @@ int main(int argc, char* argv[]) {
 
   uWS::Hub h;
 
+  // Getting an eventually specified command line parameter
   bool do_twiddling = argc > 1 && (std::string(argv[1]) == "-t" || std::string(argv[1]) == "--twiddle");
-  if ( do_twiddling ) {
-    std::cout << "Twiddle has been activated." << std::endl;
-  }
 
   // initializing the P, I and D coefficients
   double Kp = 0.03;
-  double Ki = 0.001;
+  double Ki = 0.0001;
   double Kd = 1.1;
 
   // the PID variable will be initialized implicitly by the twiddler

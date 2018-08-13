@@ -48,6 +48,9 @@ class Twiddle {
   // Step count in the current run
   unsigned int step_count;
 
+  // Total error of the current loop
+  double loop_error;
+
   // As the names say
   time_t twiddle_start;
   time_t loop_start;
@@ -78,7 +81,7 @@ public:
    */
   Twiddle(bool is_active,
           double Kp, double Ki, double Kd,
-          double delta_Kp = 0.01, double delta_Ki = 0.0005, double delta_Kd = 0.2,
+          double delta_Kp = 0.01, double delta_Ki = 0.00005, double delta_Kd = 0.2,
           unsigned int max_steps = 1100,
           double tolerance = 0.001);
 

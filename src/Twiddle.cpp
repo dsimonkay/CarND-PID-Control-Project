@@ -28,6 +28,7 @@ Twiddle::Twiddle(bool is_active,
   // Everything begins now
   loop_count = 0;
   loop_start = 0;
+  loop_error = 0.0;
 
   // Initializing the parameters...
   params.push_back(Kp);  // initial Kp
@@ -42,6 +43,9 @@ Twiddle::Twiddle(bool is_active,
 
   // Initializing the object for a new loop
   if ( is_active ) {
+
+    // Debug message
+    std::cout << "Twiddle is active. Target for SUM(dp): " << tolerance << std::endl << std::endl;
 
     // Executing the first step of the twiddle loop, actually
     best_error_so_far = std::numeric_limits<double>::max();
@@ -71,9 +75,6 @@ bool Twiddle::isActive() {
  */
 void Twiddle::start(PID &pid) {
 
-  // Saving the total error of the previous loop (...)
-  double loop_error = pid.getTotalError();
-
   // (Re)initializing the PID controller
   pid.init(params[0], params[1], params[2]);
 
@@ -85,7 +86,7 @@ void Twiddle::start(PID &pid) {
       time_t now;
       time(&now);
       double loop_time = difftime(now, loop_start);
-      std::cout << "Loop " << loop_count << " took " << loop_time << " seconds. Error: " << loop_error << std::endl;
+      std::cout << "Loop " << loop_count << " took " << loop_time << " seconds. Accumulated error: " << loop_error << std::endl;
     }
 
     // Entering the next loop
@@ -96,7 +97,7 @@ void Twiddle::start(PID &pid) {
     // Debug output
     double delta_params_sum = std::accumulate(delta_params.begin(), delta_params.end(), 0.0);
     std::cout << "Starting loop " << loop_count <<
-                 ".   [Kp, Ki, Kd]:  [" << params[0] << ", " << params[1] << ", " << params[2] <<
+                 ".   [Kp, Ki, Kd]: [" << params[0] << ", " << params[1] << ", " << params[2] <<
                  "]    SUM(dp): " << delta_params_sum <<
                  "    Best error: " << best_error_so_far << std::endl;
   }
@@ -138,6 +139,9 @@ int Twiddle::check(PID &pid, double cte) {
   // Default return value
   int status = NOTHING_SPECIAL;
 
+  // Storing the important metric
+  loop_error = pid.getTotalError();
+
 
   // Breaking the current twiddle loop in case the current CTE is simply too big
   // (=the vehicle probably has driven off-track).
@@ -172,11 +176,10 @@ int Twiddle::check(PID &pid, double cte) {
     }
 
     // Let's examine the resulting total error
-    double error = pid.getTotalError();
-    if ( error < best_error_so_far ) {
+    if ( loop_error < best_error_so_far ) {
 
       // The run resulted in a better performance than what we've seen so far; increasing delta parameter value
-      best_error_so_far = error;
+      best_error_so_far = loop_error;
       best_params = params;
       delta_params[current_idx] *= (1 + DELTA_PARAM_CHANGE);
 
