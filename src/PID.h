@@ -12,12 +12,12 @@ class PID {
   bool first_update;
 
   // Maximal allowed steering angle in radian and speed (in MPH).
-  double max_angle;
-  double max_speed;
-  double min_speed;
+  constexpr double max_angle = M_PI * 24.56 / 180.0;
+  constexpr double max_speed = 40;
+  constexpr double min_speed = 10;
 
-  // Total squared error
-  double total_squared_error;
+  // Total (absolute) error
+  double total_error;
 
   // Ss the name says: the value of the last calculated steering angle (in radians)
   double steering;

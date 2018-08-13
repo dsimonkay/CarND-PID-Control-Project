@@ -59,11 +59,10 @@ int main(int argc, char* argv[]) {
   double Ki = 0.00001;
   double Kd = 1.0;
 
-  // the PID variable will be initialized implicitly by the twiddler (regardless of whether we'll
-  // do the twiddling or not)  
+  // the PID variable will be initialized implicitly by the twiddler (regardless of whether we'll do the twiddling or not)
   PID pid;
-  Twiddle twiddle = Twiddle(do_twiddling, Kp, Ki, Kd);
-  twiddle.Init(pid);
+  Twiddle twiddle(do_twiddling, Kp, Ki, Kd);
+  twiddle.Start(pid);
 
   h.onMessage([&pid, &twiddle](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
 
@@ -87,31 +86,27 @@ int main(int argc, char* argv[]) {
           double steering;
           double throttle;
 
-          std::cout << "cte: " << cte << "  step " << twiddle.step_count << std::endl;
-
           // classic PID processing steps
           pid.UpdateError(cte);
           steering = pid.CalculateSteering(cte);
           throttle = pid.CalculateThrottle(cte);
 
-          // DEBUG!!!
-          steering = -1.0;
-
           // we have other things to do in case twiddling is active
           if ( twiddle.isActive() ) {
 
-            // breaking the curent twiddle session in case the curent CTE is simply too big
-            if ( std::abs(cte) > Twiddle::CTE_LIMIT ) {
+            int twiddle_status = twiddle.Check(pid, cte);
+            if ( twiddle_status == Twiddle::FINISHED ) {
 
-              std::cout << " ** CTE (" << cte << ") over limit; finishing twiddle cycle." << std::endl;
-              twiddle.Init(pid);
-              resetSimulator(ws);
-              return;
-            }
+              // Goodbye, Mr. Anderson
+              exit(0);
 
-            unsigned int twiddle_result = twiddle.doOneStep(pid);
-            if ( twiddle_result == Twiddle::FINISHED ) {
+            } else if ( twiddle_status == Twiddle::RESTART_LOOP ) {
 
+                // Restarting the simulator and the PID controller as well
+                resetSimulator(ws);
+                resetSimulator(ws);
+                twiddle.Start(pid);
+                return;
             }
           }
 
@@ -119,7 +114,6 @@ int main(int argc, char* argv[]) {
           msgJson["steering_angle"] = steering;
           msgJson["throttle"] = throttle;
           auto msg = "42[\"steer\"," + msgJson.dump() + "]";
-          // std::cout << msg << std::endl;
           ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
         }
 

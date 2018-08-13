@@ -13,7 +13,7 @@ PID::~PID() {}
 void PID::Init(double Kp, double Ki, double Kd) {
 
   // Initializing pretty much everything
-  total_squared_error = 0.0;
+  total_error = 0.0;
 
   // Error terms
   p_error = i_error = d_error = 0.0;
@@ -22,15 +22,6 @@ void PID::Init(double Kp, double Ki, double Kd) {
   this->Kp = Kp;
   this->Ki = Ki;
   this->Kd = Kd;
-
-  // Max. allowed steering angle in radians
-  max_angle = M_PI * 25.0 / 180.0;
-  
-  // Max. allowed speed in MPH (whatever)
-  max_speed = 40.0;
-
-  // Min. required speed in MPH (whatever)
-  min_speed = 10.0;
 
   // Current steering value
   steering = 0.0;
@@ -51,7 +42,7 @@ void PID::UpdateError(double cte) {
   i_error += cte;
 
   // Increasing total error
-  total_squared_error += cte * cte;
+  total_error += std::abs(cte);
 
   // Never again 'first'
   first_update = false;
@@ -60,7 +51,7 @@ void PID::UpdateError(double cte) {
 
 double PID::TotalError() {
 
-  return total_squared_error;
+  return total_error;
 }
 
 
