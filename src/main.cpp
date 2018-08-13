@@ -13,11 +13,6 @@
 // for convenience
 using json = nlohmann::json;
 
-// For converting back and forth between radians and degrees.
-constexpr double pi() { return M_PI; }
-double deg2rad(double x) { return x * pi() / 180; }
-double rad2deg(double x) { return x * 180 / pi(); }
-
 // Checks if the SocketIO event has JSON data.
 // If there is data the JSON object in string format will be returned,
 // else the empty string "" will be returned.
@@ -54,15 +49,16 @@ int main(int argc, char* argv[]) {
     std::cout << "Twiddle has been activated." << std::endl;
   }
 
-  // initialize the P, I and D coefficients
-  double Kp = 0.1;
-  double Ki = 0.00001;
-  double Kd = 1.0;
+  // initializing the P, I and D coefficients
+  double Kp = 0.03;
+  double Ki = 0.001;
+  double Kd = 1.1;
 
-  // the PID variable will be initialized implicitly by the twiddler (regardless of whether we'll do the twiddling or not)
+  // the PID variable will be initialized implicitly by the twiddler
+  // (regardless of whether we'll do the twiddle thing or not).
   PID pid;
   Twiddle twiddle(do_twiddling, Kp, Ki, Kd);
-  twiddle.Start(pid);
+  twiddle.start(pid);
 
   h.onMessage([&pid, &twiddle](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
 
@@ -80,34 +76,36 @@ int main(int argc, char* argv[]) {
 
           // j[1] is the data JSON object
           double cte = std::stod(j[1]["cte"].get<std::string>());
-          double speed = std::stod(j[1]["speed"].get<std::string>());
-          double angle = std::stod(j[1]["steering_angle"].get<std::string>());
 
-          double steering;
-          double throttle;
+          // sorry, guys
+          // double speed = std::stod(j[1]["speed"].get<std::string>());
+          // double angle = std::stod(j[1]["steering_angle"].get<std::string>());
 
           // classic PID processing steps
-          pid.UpdateError(cte);
-          steering = pid.CalculateSteering(cte);
-          throttle = pid.CalculateThrottle(cte);
+          pid.updateError(cte);
+          double steering = pid.calculateSteering(cte);
+          double throttle = pid.calculateThrottle(cte);
 
-          // we have other things to do in case twiddling is active
+          // we have things to do in case twiddling is active
           if ( twiddle.isActive() ) {
 
-            int twiddle_status = twiddle.Check(pid, cte);
+            int twiddle_status = twiddle.check(pid, cte);
             if ( twiddle_status == Twiddle::FINISHED ) {
 
-              // Goodbye, Mr. Anderson
+              // goodbye, Mr. Anderson
               exit(0);
 
             } else if ( twiddle_status == Twiddle::RESTART_LOOP ) {
 
-                // Restarting the simulator and the PID controller as well
+                // restarting the simulator and the PID controller as well
                 resetSimulator(ws);
-                resetSimulator(ws);
-                twiddle.Start(pid);
+                twiddle.start(pid);
                 return;
             }
+
+          } else {
+            // basic debug output
+            std::cout << "CTE, steering, throttle:   " << cte << ",  " << steering << ",  " << throttle << std::endl;
           }
 
           json msgJson;

@@ -10,7 +10,7 @@ PID::PID() {}
 PID::~PID() {}
 
 
-void PID::Init(double Kp, double Ki, double Kd) {
+void PID::init(double Kp, double Ki, double Kd) {
 
   // Initializing pretty much everything
   total_error = 0.0;
@@ -29,10 +29,10 @@ void PID::Init(double Kp, double Ki, double Kd) {
 }
 
 
-void PID::UpdateError(double cte) {
+void PID::updateError(double cte) {
 
   // We set the differential error exceptionally to 0 for the first measurement.
-  // For all other cases: p_error still holds the previous cross track error value at this point.
+  // For all other cases: `p_error` still holds the previous cross track error value at this point.
   d_error = first_update ? 0.0 : cte - p_error;
 
   // Now we can overwrite its value
@@ -49,14 +49,14 @@ void PID::UpdateError(double cte) {
 }
 
 
-double PID::TotalError() {
+double PID::getTotalError() {
 
   return total_error;
 }
 
 
 
-double PID::CalculateSteering(double cte) {
+double PID::calculateSteering(double cte) {
 
   // Calculating the raw steering angle in radians
   double angle = -Kp * p_error - Ki * i_error - Kd * d_error;
@@ -90,7 +90,7 @@ double PID::CalculateSteering(double cte) {
 }
 
 
-double PID::CalculateThrottle(double cte) {
+double PID::calculateThrottle(double cte) {
 
   // Above this cte we choose `min_speed`
   const double limit = 2.0;

@@ -1,6 +1,7 @@
 #include "Twiddle.h"
 #include <limits>
 #include <numeric>
+#include <iostream>
 
 /*
  * Construct a Twiddle object
@@ -33,7 +34,7 @@ Twiddle::Twiddle(bool is_active,
   params.push_back(Ki);  // initial Ki
   params.push_back(Kd);  // initial Kd
 
-  // ...then finally the delta values
+  // ...and the delta values
   delta_params.push_back(delta_Kp);  // initial delta Kp
   delta_params.push_back(delta_Ki);  // initial delta Ki
   delta_params.push_back(delta_Kd);  // initial delta Kd
@@ -43,11 +44,13 @@ Twiddle::Twiddle(bool is_active,
   if ( is_active ) {
 
     // Executing the first step of the twiddle loop, actually
-    step_count = 0;
     best_error_so_far = std::numeric_limits<double>::max();
     current_idx = 0;
     params[current_idx] += delta_params[current_idx];
     parameter_increased = true;
+
+    // Registering start time
+    time(&twiddle_start);
   }
 }
 
@@ -66,10 +69,10 @@ bool Twiddle::isActive() {
 /**
  * Start a whole new twiddle loop.
  */
-void Twiddle::Start(PID &pid) {
+void Twiddle::start(PID &pid) {
 
   // (Re)initializing the PID controller
-  pid.Init(params[0], params[1], params[2]);
+  pid.init(params[0], params[1], params[2]);
 
   if ( is_active ) {
 
@@ -79,16 +82,19 @@ void Twiddle::Start(PID &pid) {
       time_t now;
       time(&now);
       double loop_time = difftime(now, loop_start);
-      std::cout << "Last loop took " << loop_time << " seconds." << std::endl;
+      std::cout << "Loop " << loop_count << " took " << loop_time << " seconds." << std::endl;
     }
 
     // Entering the next loop
+    step_count = 0;
     loop_count++;
     time(&loop_start);
 
     // Debug output
     double delta_params_sum = std::accumulate(delta_params.begin(), delta_params.end(), 0.0);
-    std::cout << "[" << loop_count << "] Starting loop. Kp: " << params[0] << ",  Ki: " << params[1] << "  Kd: " << params[2] << "   sum(dp): " << delta_params_sum << std::endl;
+    std::cout << "Starting loop " << loop_count << ".   [Kp, Ki, Kd]:  [" << params[0] <<
+                 ", " << params[1] << ", " << params[2] << "]   sum(dp): " << delta_params_sum <<
+                 "   best error: " << best_error_so_far << std::endl;
   }
 }
 
@@ -97,7 +103,7 @@ void Twiddle::Start(PID &pid) {
 /**
 * Processing the failure branch (or refactoring rulez).
 */
-void ProcessFailure() {
+void Twiddle::processFailure() {
 
   if ( parameter_increased ) {
     // Increasing the current parameter didn't work; let's try the other way: decreasing the current parameter
@@ -106,8 +112,8 @@ void ProcessFailure() {
   } else {
     // Neither increasing nor decreasing the parameter worked. Resetting the current parameter to its original value,
     // then decreasing the current delta_params for the next run...
-    params[current_idx] += delta_params[current_idx]
-    delta_params[current_idx] *= (1 - DELTA_DELTA_PARAMS)
+    params[current_idx] += delta_params[current_idx];
+    delta_params[current_idx] *= (1 - DELTA_PARAM_CHANGE);
 
     // ...and progressing to the next parameter
     current_idx = (current_idx + 1) % 3;
@@ -123,17 +129,18 @@ void ProcessFailure() {
 /**
  * Check twiddle status after the current update step.
  */
-int Twiddle::Check(PID &pid, double cte) {
+int Twiddle::check(PID &pid, double cte) {
 
   // default return value
   int status = NOTHING_SPECIAL;
 
 
-  // breaking the current twiddle loop in case the current CTE is simply too big (=the vehicle probably drove off-track)
-  if ( std::abs(cte) > Twiddle::CTE_LIMIT ) {
+  // Breaking the current twiddle loop in case the current CTE is simply too big
+  // (=the vehicle probably has driven off-track).
+  if ( std::abs(cte) > CTE_LIMIT ) {
 
-    std::cout << " ** CTE (" << cte << ") over limit; finishing twiddle cycle." << std::endl;
-    ProcessFailure();
+    std::cout << " *** CTE (" << cte << ") exceeds allowed limit; breaking/restarting twiddle loop." << std::endl;
+    processFailure();
 
     return RESTART_LOOP;
   }
@@ -141,7 +148,7 @@ int Twiddle::Check(PID &pid, double cte) {
   // Watching as time goes by
   step_count++;
 
-  // Have we just arrived at the end of a loop?
+  // Have we just arrived to the end of a loop?
   if ( step_count > max_steps ) {
 
     // Checking whether we've reached the desired tolerance level
@@ -149,19 +156,23 @@ int Twiddle::Check(PID &pid, double cte) {
     if ( delta_params_sum <= tolerance ) {
 
       // That was it. https://media.giphy.com/media/8g63zqQ5RPt60/giphy.gif
-      std::cout << std::endl << "Twiddle finished in " << loop_count << " runs." << std::endl;
+      time_t now;
+      time(&now);
+      double loop_time = difftime(now, loop_start);
+
+      std::cout << std::endl << "Twiddle finished in " << loop_time << " seconds." << std::endl;
       std::cout << "Final parameters:\n\tKp: " << params[0] << "\n\tKi: " << params[1] << "\n\tKd: " << params[2] << std::endl << std::endl;
 
       return FINISHED;
     }
 
     // Let's examine the resulting total error
-    double error = pid.TotalError();
+    double error = pid.getTotalError();
     if ( error < best_error_so_far ) {
 
       // The run resulted in a better performance than what we've seen so far; increasing delta parameter value
       best_error_so_far = error;
-      delta_params[current_idx] *= (1 + DELTA_DELTA_PARAMS);
+      delta_params[current_idx] *= (1 + DELTA_PARAM_CHANGE);
 
       // Resetting the algorithm to the 'increasing' part and progressing to the next parameter
       current_idx = (current_idx + 1) % 3;
@@ -169,7 +180,7 @@ int Twiddle::Check(PID &pid, double cte) {
       parameter_increased = true;
 
     } else {
-      ProcessFailure();
+      processFailure();
     }
 
     status = RESTART_LOOP;

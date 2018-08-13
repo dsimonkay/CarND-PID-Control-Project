@@ -35,8 +35,9 @@ class Twiddle {
   // Current delta values for Kp, Ki and Kd
   std::vector<double> delta_params;
 
-  // Step size for parameter change (actually a multiplier when added to or subtracted from 1)
-  constexpr double DELTA_DELTA_PARAMS = 0.02;
+  // Step size for parameter change. It will used as a multiplier for increasing/decreasing
+  // the value of a parameter in the form of adding to or subtracting from 1.
+  const double DELTA_PARAM_CHANGE = 0.02;
 
   // Nunber of runs / loops done by the algorithm
   unsigned int loop_count;
@@ -44,26 +45,27 @@ class Twiddle {
   // Step count in the current run
   unsigned int step_count;
 
-  // As the name says
+  // As the names say
+  time_t twiddle_start;
   time_t loop_start;
 
 public:
 
-  // Return status codes for the main twiddle-processing-step function (yeah, I know, how about enums.)
+  // Return status codes for the main twiddle-processing-step function
   static const int RESTART_LOOP = -1;
   static const int NOTHING_SPECIAL = 0;
   static const int FINISHED = 1;
 
-  // If the CTE becomes ever bigger than the limit defined here, we'll break the current twiddle-session,
-  // reset the simulator and start over the process.
+  // If the CTE ever becomes bigger than the limit defined here, we'll break the current twiddle-session,
+  // reset the simulator and start over the loop.
   static constexpr double CTE_LIMIT = 3.0;
 
   /*
    * Constructor.
    * @param is_active -- flag signalizing whether the twiddle algoritm will be used
-   * @param Kp - base/initial Kp coefficient
-   * @param Ki - base/initial Ki coefficient
-   * @param Kd - base/initial Kd coefficient
+   * @param Kp - initial Kp coefficient
+   * @param Ki - initial Ki coefficient
+   * @param Kd - initial Kd coefficient
    * @param delta_Kp - initial delta Kp
    * @param delta_Ki - initial delta Ki
    * @param delta_Kd - initial delta Kd
@@ -72,9 +74,9 @@ public:
    */
   Twiddle(bool is_active,
           double Kp, double Ki, double Kd,
-          double delta_Kp = 0.01, double delta_Ki = 0.001, double delta_Kd = 0.5,
-          unsigned int max_steps = 1100,
-          double tolerance = 0.01);
+          double delta_Kp = 0.01, double delta_Ki = 0.0005, double delta_Kd = 0.2,
+          unsigned int max_steps = 1111,
+          double tolerance = 0.001);
 
   /*
    * Destructor.
@@ -90,20 +92,19 @@ public:
    * Start a whole new twiddle loop.
    * @param pid -- PID controller instance
    */
-  void Start(PID &pid);
+  void start(PID &pid);
 
   /**
    * Check twiddle status after the current update step.
    * @param pid -- PID controller instance
    * @param cte -- cross-track error
    */
-  int Check(PID &pid, double cte);
+  int check(PID &pid, double cte);
 
   /**
    * Processing the failure branch (or refactoring rulez).
    */
-  void ProcessFailure();
-
+  void processFailure();
 
 };
 

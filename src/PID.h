@@ -12,9 +12,9 @@ class PID {
   bool first_update;
 
   // Maximal allowed steering angle in radian and speed (in MPH).
-  constexpr double max_angle = M_PI * 24.56 / 180.0;
-  constexpr double max_speed = 40;
-  constexpr double min_speed = 10;
+  const double max_angle = M_PI * 24.56 / 180.0;
+  const double max_speed = 40;
+  const double min_speed = 10;
 
   // Total (absolute) error
   double total_error;
@@ -50,29 +50,29 @@ public:
   /*
    * Initialize PID.
    */
-  void Init(double Kp, double Ki, double Kd);
+  void init(double Kp, double Ki, double Kd);
 
   /*
    * Update the PID error variables given cross track error.
    */
-  void UpdateError(double cte);
+  void updateError(double cte);
 
   /*
    * Calculate the total PID error.
    */
-  double TotalError();
+  double getTotalError();
 
   /*
    * Calculate the steering value.
    * @param angle Current cross track error value
    */
-  double CalculateSteering(double cte);
+  double calculateSteering(double cte);
 
   /*
    * Calculate throttle.
    * @param angle Current cross track error value
    */
-  double CalculateThrottle(double cte);
+  double calculateThrottle(double cte);
 };
 
 #endif /* PID_H */
