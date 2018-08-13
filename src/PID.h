@@ -13,14 +13,15 @@ class PID {
 
   // Maximal allowed steering angle in radian and speed (in MPH).
   const double max_angle = M_PI * 24.56 / 180.0;
-  const double max_speed = 50;
+  const double max_speed = 40;
   const double min_speed = 10;
 
   // Total (absolute) error
   double total_error;
 
-  // Ss the name says: the value of the last calculated steering angle (in radians)
+  // As the name says: the value of the last calculated steering angle (in radians) and throttle
   double steering;
+  double throttle;
 
 public:
   /*

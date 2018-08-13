@@ -71,6 +71,9 @@ bool Twiddle::isActive() {
  */
 void Twiddle::start(PID &pid) {
 
+  // Saving the total error of the previous loop (...)
+  double loop_error = pid.getTotalError();
+
   // (Re)initializing the PID controller
   pid.init(params[0], params[1], params[2]);
 
@@ -82,7 +85,7 @@ void Twiddle::start(PID &pid) {
       time_t now;
       time(&now);
       double loop_time = difftime(now, loop_start);
-      std::cout << "Loop " << loop_count << " took " << loop_time << " seconds." << std::endl;
+      std::cout << "Loop " << loop_count << " took " << loop_time << " seconds. Error: " << loop_error << std::endl;
     }
 
     // Entering the next loop
@@ -92,9 +95,10 @@ void Twiddle::start(PID &pid) {
 
     // Debug output
     double delta_params_sum = std::accumulate(delta_params.begin(), delta_params.end(), 0.0);
-    std::cout << "Starting loop " << loop_count << ".   [Kp, Ki, Kd]:  [" << params[0] <<
-                 ", " << params[1] << ", " << params[2] << "]   sum(dp): " << delta_params_sum <<
-                 "   best error: " << best_error_so_far << std::endl;
+    std::cout << "Starting loop " << loop_count <<
+                 ".   [Kp, Ki, Kd]:  [" << params[0] << ", " << params[1] << ", " << params[2] <<
+                 "]    SUM(dp): " << delta_params_sum <<
+                 "    Best error: " << best_error_so_far << std::endl;
   }
 }
 
@@ -131,7 +135,7 @@ void Twiddle::processFailure() {
  */
 int Twiddle::check(PID &pid, double cte) {
 
-  // default return value
+  // Default return value
   int status = NOTHING_SPECIAL;
 
 
@@ -161,8 +165,9 @@ int Twiddle::check(PID &pid, double cte) {
       double loop_time = difftime(now, loop_start);
 
       std::cout << std::endl << "Twiddle finished in " << loop_time << " seconds." << std::endl;
-      std::cout << "Final parameters:\n\tKp: " << params[0] << "\n\tKi: " << params[1] << "\n\tKd: " << params[2] << std::endl << std::endl;
-
+      std::cout << "Best parameters:\n\tKp: " << best_params[0] <<
+                                   "\n\tKi: " << best_params[1] <<
+                                   "\n\tKd: " << best_params[2] << std::endl << std::endl;
       return FINISHED;
     }
 
@@ -172,6 +177,7 @@ int Twiddle::check(PID &pid, double cte) {
 
       // The run resulted in a better performance than what we've seen so far; increasing delta parameter value
       best_error_so_far = error;
+      best_params = params;
       delta_params[current_idx] *= (1 + DELTA_PARAM_CHANGE);
 
       // Resetting the algorithm to the 'increasing' part and progressing to the next parameter

@@ -25,6 +25,7 @@ void PID::init(double Kp, double Ki, double Kd) {
 
   // Current steering value
   steering = 0.0;
+  throttle = 0.0;
   first_update = true;
 }
 
@@ -67,24 +68,7 @@ double PID::calculateSteering(double cte) {
 
   // Normalizing the steering angle into the range [-1, 1] where the range limits correspond to -/+ 25 degrees.
   // As our steering value is still in radians, we use radians for the normalization as well.
-  const double range_limit = M_PI * 25 / 180;
-  double steering = angle / range_limit;
-
-  // std::cout << "[speed: " << speed << "  angle: " << angle << " pE: " << p_error << "  iE: " << i_error << " dE: " << d_error << "] -- " << steering << std::endl;
-
-  // Normalizing between [-1, 1]
-  // steering_value /= max_steering_angle;
-
-  // The higher the speed of the vehicle is, the more careful we do sudden movements on the steering wheel
-  // steering_value *= (100 - speed) / 100.0;
-
-  // double normalized_angle = angle / 25.0;
-  // steering = (normalized_angle + steering) / 2.0;
-
-  // pfff
-  // steering = (this->steering + steering) / 2.0;
-
-  this->steering = steering;
+  steering = angle / max_angle;
 
   return steering;
 }
@@ -100,7 +84,7 @@ double PID::calculateThrottle(double cte) {
   double speed = min_speed + (max_speed - min_speed) * (1 - (cropped_cte / limit));
 
   // Normalizing between [0, 1]
-  double throttle = speed / 100.0;
+  throttle = speed / 100.0;
 
   return throttle;
 }

@@ -29,10 +29,13 @@ class Twiddle {
   // Are we probing an increased or decreased parameter value?
   bool parameter_increased;
 
-  // Coefficients Kp, Ki and Kd
+  // Coefficients Kp, Ki and Kd currently used by the PID controller
   std::vector<double> params;
 
-  // Current delta values for Kp, Ki and Kd
+  // Best coefficients Kp, Ki and Kd
+  std::vector<double> best_params;
+
+  // Current delta values for Kp, Ki and Kd we've found so far
   std::vector<double> delta_params;
 
   // Step size for parameter change. It will used as a multiplier for increasing/decreasing
@@ -58,7 +61,7 @@ public:
 
   // If the CTE ever becomes bigger than the limit defined here, we'll break the current twiddle-session,
   // reset the simulator and start over the loop.
-  static constexpr double CTE_LIMIT = 3.0;
+  static constexpr double CTE_LIMIT = 2.5;
 
   /*
    * Constructor.
@@ -69,13 +72,14 @@ public:
    * @param delta_Kp - initial delta Kp
    * @param delta_Ki - initial delta Ki
    * @param delta_Kd - initial delta Kd
-   * @param max_steps -- number of maximum steps that a twiddle loop will consist of
+   * @param max_steps -- number of maximum steps that a twiddle loop will consist of.
+   *                     guess what: the number depends on the maximum speed value.
    * @param tolerance -- tolerance level to be reached
    */
   Twiddle(bool is_active,
           double Kp, double Ki, double Kd,
           double delta_Kp = 0.01, double delta_Ki = 0.0005, double delta_Kd = 0.2,
-          unsigned int max_steps = 1111,
+          unsigned int max_steps = 1100,
           double tolerance = 0.001);
 
   /*
