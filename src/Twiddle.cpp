@@ -92,8 +92,8 @@ void Twiddle::startLoop(PID &pid) {
     // Debug output
     double delta_params_sum = std::accumulate(delta_params.begin(), delta_params.end(), 0.0);
     std::cout << "Starting loop " << loop_count <<
-                 ".   [Kp, Ki, Kd]: [" << params[0] << ", " << params[1] << ", " << params[2] <<
-                 "   [dp, di, dd]: [" << delta_params[0] << ", " << delta_params[1] << ", " << delta_params[2] <<
+                 ".    [Kp, Ki, Kd]: [" << params[0] << ", " << params[1] << ", " << params[2] <<
+                 "    [dp, di, dd]: [" << delta_params[0] << ", " << delta_params[1] << ", " << delta_params[2] <<
                  "]    SUM(dp): " << delta_params_sum <<
                  "    Best error: " << best_error_so_far << std::endl;
   }
