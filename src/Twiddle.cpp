@@ -118,7 +118,7 @@ void Twiddle::endLoop(PID &pid) {
   // Debug output
   std::cout << "Finished loop " << loop_count << "; it took " << loop_time << " seconds." <<
                " Accumulated error: " << loop_error <<
-               " Max. CTE: " << max_cte << std::endl;
+               " Max. CTE: " << max_cte << std::endl << std::endl;
 }
 
 
