@@ -64,7 +64,7 @@ public:
 
   // If the CTE ever becomes bigger than the limit defined here, we'll break the current twiddle-session,
   // reset the simulator and start over the loop.
-  static constexpr double CTE_LIMIT = 2.5;
+  static constexpr double CTE_LIMIT = 2.85;
 
   /*
    * Constructor.
