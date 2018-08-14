@@ -35,6 +35,10 @@ Twiddle::Twiddle(bool is_active,
   params.push_back(Ki);  // initial Ki
   params.push_back(Kd);  // initial Kd
 
+  best_params.push_back(Kp);  // initial best Kp
+  best_params.push_back(Ki);  // initial best Ki
+  best_params.push_back(Kd);  // initial best Kd
+
   // ...and the delta values
   delta_params.push_back(delta_Kp);  // initial delta Kp
   delta_params.push_back(delta_Ki);  // initial delta Ki
@@ -73,24 +77,12 @@ bool Twiddle::isActive() {
 /**
  * Start a whole new twiddle loop.
  */
-void Twiddle::start(PID &pid) {
-
-  double max_cte = pid.getMaxCTE();
+void Twiddle::startLoop(PID &pid) {
 
   // (Re)initializing the PID controller
   pid.init(params[0], params[1], params[2]);
 
   if ( is_active ) {
-
-    // Timing
-    if ( loop_start != 0 ) {
-
-      time_t now;
-      time(&now);
-      double loop_time = difftime(now, loop_start);
-      std::cout << "Loop " << loop_count << " took " << loop_time << " seconds. Accumulated error: " << loop_error <<
-                   " Max. CTE: " << max_cte << std::endl;
-    }
 
     // Entering the next loop
     step_count = 0;
@@ -101,9 +93,32 @@ void Twiddle::start(PID &pid) {
     double delta_params_sum = std::accumulate(delta_params.begin(), delta_params.end(), 0.0);
     std::cout << "Starting loop " << loop_count <<
                  ".   [Kp, Ki, Kd]: [" << params[0] << ", " << params[1] << ", " << params[2] <<
+                 "   [dp, di, dd]: [" << delta_params[0] << ", " << delta_params[1] << ", " << delta_params[2] <<
                  "]    SUM(dp): " << delta_params_sum <<
                  "    Best error: " << best_error_so_far << std::endl;
   }
+}
+
+
+
+/**
+ * Doing minor administrative tasks (=some debug output) at the end of a twiddle loop. 
+ * @param pid -- PID controller instance
+ */
+void Twiddle::endLoop(PID &pid) {
+
+  // Registering loop duration...
+  time_t now;
+  time(&now);
+  double loop_time = difftime(now, loop_start);
+
+  // ...and the biggest CTE experienced during the loop
+  double max_cte = pid.getMaxCTE();
+
+  // Debug output
+  std::cout << "Finished loop " << loop_count << "; it took " << loop_time << " seconds." <<
+               " Accumulated error: " << loop_error <<
+               " Max. CTE: " << max_cte << std::endl;
 }
 
 
@@ -150,7 +165,7 @@ int Twiddle::check(PID &pid, double cte) {
   // (=the vehicle probably has driven off-track).
   if ( std::abs(cte) > CTE_LIMIT ) {
 
-    std::cout << " *** CTE (" << cte << ") exceeds allowed limit; breaking/restarting twiddle loop." << std::endl;
+    std::cout << " *** CTE (" << cte << ") exceeds allowed limit; leaving twiddle loop." << std::endl;
     processFailure();
 
     return RESTART_LOOP;
@@ -169,9 +184,10 @@ int Twiddle::check(PID &pid, double cte) {
       // That was it. https://media.giphy.com/media/8g63zqQ5RPt60/giphy.gif
       time_t now;
       time(&now);
-      double loop_time = difftime(now, loop_start);
+      double twiddle_time = difftime(now, twiddle_start);
 
-      std::cout << std::endl << "Twiddle finished in " << loop_time << " seconds." << std::endl;
+      // Debug output
+      std::cout << std::endl << "Twiddle finished in " << twiddle_time << " seconds." << std::endl;
       std::cout << "Best parameters:\n\tKp: " << best_params[0] <<
                                    "\n\tKi: " << best_params[1] <<
                                    "\n\tKd: " << best_params[2] << std::endl << std::endl;
@@ -190,6 +206,11 @@ int Twiddle::check(PID &pid, double cte) {
       current_idx = (current_idx + 1) % 3;
       params[current_idx] += delta_params[current_idx];
       parameter_increased = true;
+
+      // Debug output
+      std::cout << " ** Found new best parameters:  [Kp, Ki, Kd]: [" << best_params[0] <<
+                                   ", " << best_params[1] << ", " << best_params[2] << "]" << std::endl;
+
 
     } else {
       processFailure();

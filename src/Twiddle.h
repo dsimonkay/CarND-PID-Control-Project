@@ -81,7 +81,9 @@ public:
    */
   Twiddle(bool is_active,
           double Kp, double Ki, double Kd,
-          double delta_Kp = 0.01, double delta_Ki = 0.00005, double delta_Kd = 0.2,
+          double delta_Kp = 0.02,
+          double delta_Ki = 0.0005,
+          double delta_Kd = 0.3,
           unsigned int max_steps = 1100,
           double tolerance = 0.001);
 
@@ -99,7 +101,13 @@ public:
    * Start a whole new twiddle loop.
    * @param pid -- PID controller instance
    */
-  void start(PID &pid);
+  void startLoop(PID &pid);
+
+  /**
+   * Doing minor administrative tasks at the end of a twiddle loop. 
+   * @param pid -- PID controller instance
+   */
+  void endLoop(PID &pid);
 
   /**
    * Check twiddle status after the current update step.

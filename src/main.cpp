@@ -1,62 +1,60 @@
-#include <uWS/uWS.h>
 #include <algorithm>
 #include <iostream>
+#include "helper_functions.h"
 #include "json.hpp"
 #include "PID.h"
 #include "Twiddle.h"
-#include <math.h>
-#include <fstream>
-#include <sstream>
-#include <ctime>
 
 
 // for convenience
 using json = nlohmann::json;
-
-// Checks if the SocketIO event has JSON data.
-// If there is data the JSON object in string format will be returned,
-// else the empty string "" will be returned.
-std::string hasData(std::string s) {
-
-  auto found_null = s.find("null");
-  auto b1 = s.find_first_of("[");
-  auto b2 = s.find_last_of("]");
-  if (found_null != std::string::npos) {
-    return "";
-
-  } else if (b1 != std::string::npos && b2 != std::string::npos) {
-    return s.substr(b1, b2 - b1 + 1);
-  }
-
-  return "";
-}
-
-
-// Sending a RESET signal to the simulator
-void resetSimulator(uWS::WebSocket<uWS::SERVER> &ws) {
-
-  std::string msg = "42[\"reset\",{}]";
-  ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
-}
 
 
 int main(int argc, char* argv[]) {
 
   uWS::Hub h;
 
-  // Getting an eventually specified command line parameter
-  bool do_twiddling = argc > 1 && (std::string(argv[1]) == "-t" || std::string(argv[1]) == "--twiddle");
+  // Flag for twiddle mode. Its value can be set to `true` by providing the command line parameter "-t" or "--twiddle".
+  bool do_twiddling = false;
 
-  // initializing the P, I and D coefficients
-  double Kp = 0.03;
-  double Ki = 0.0001;
-  double Kd = 1.1;
+  // Initializing the P, I and D coefficients. These can be overridden by command line parameters "-Kp", "-Ki" and "-Kd"
+  // Example: user@localhost:~/CarND-PID-Control-Project/build$ ./pid -Kp 0.04 -Ki 0.001 -Kd 1.4 --twiddle
+  double Kp = 0.04;
+  double Ki = 0.001;
+  double Kd = 1.4;
 
-  // the PID variable will be initialized implicitly by the twiddler
+  // Processing command line parameters
+  for( int i = 1;  i < argc;  i++ ) {
+
+    std::string param = std::string(argv[i]);
+    std::string next_param = argc > (i+1) ? std::string(argv[i+1]) : "x";
+    std::string param_lower;
+    std::transform(param.begin(), param.end(), std::back_inserter(param_lower), ::tolower);
+
+    if ( is_numeric(next_param) ) {
+
+      if ( param_lower == "-kp" ) {
+        Kp = std::stod(next_param);
+
+      } else if ( param_lower == "-ki" ) {
+        Ki = std::stod(next_param);
+
+      } else if ( param_lower == "-kd" ) {
+        Kd = std::stod(next_param);
+      }
+
+    } else if ( param_lower == "-t" || param_lower == "--twiddle" ) {
+      do_twiddling = true;
+    }
+  }
+
+  std::cout << "Base parameters:  [Kp, Ki, Kd]: [" << Kp << ", " << Ki << ", " << Kd << "]" << std::endl;
+
+  // The PID variable will be initialized implicitly by the twiddler
   // (regardless of whether we'll do the twiddle thing or not).
   PID pid;
   Twiddle twiddle(do_twiddling, Kp, Ki, Kd);
-  twiddle.start(pid);
+  twiddle.startLoop(pid);
 
   h.onMessage([&pid, &twiddle](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
 
@@ -75,7 +73,7 @@ int main(int argc, char* argv[]) {
           // j[1] is the data JSON object
           double cte = std::stod(j[1]["cte"].get<std::string>());
 
-          // sorry, guys
+          // Sorry, guys, but you're out of the game.
           // double speed = std::stod(j[1]["speed"].get<std::string>());
           // double angle = std::stod(j[1]["steering_angle"].get<std::string>());
 
@@ -96,8 +94,10 @@ int main(int argc, char* argv[]) {
             } else if ( twiddle_status == Twiddle::RESTART_LOOP ) {
 
                 // restarting the simulator and the PID controller as well
+                twiddle.endLoop(pid);
                 resetSimulator(ws);
-                twiddle.start(pid);
+                twiddle.startLoop(pid);
+
                 return;
             }
 
