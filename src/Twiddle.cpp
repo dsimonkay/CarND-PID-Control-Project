@@ -75,6 +75,8 @@ bool Twiddle::isActive() {
  */
 void Twiddle::start(PID &pid) {
 
+  double max_cte = pid.getMaxCTE();
+
   // (Re)initializing the PID controller
   pid.init(params[0], params[1], params[2]);
 
@@ -86,7 +88,8 @@ void Twiddle::start(PID &pid) {
       time_t now;
       time(&now);
       double loop_time = difftime(now, loop_start);
-      std::cout << "Loop " << loop_count << " took " << loop_time << " seconds. Accumulated error: " << loop_error << std::endl;
+      std::cout << "Loop " << loop_count << " took " << loop_time << " seconds. Accumulated error: " << loop_error <<
+                   " Max. CTE: " << max_cte << std::endl;
     }
 
     // Entering the next loop

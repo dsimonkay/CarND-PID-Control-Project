@@ -26,6 +26,7 @@ void PID::init(double Kp, double Ki, double Kd) {
   // Current steering value
   steering = 0.0;
   throttle = 0.0;
+  max_cte = 0.0;
   first_update = true;
 }
 
@@ -45,6 +46,11 @@ void PID::updateError(double cte) {
   // Increasing total error
   total_error += std::abs(cte);
 
+  // Taking care of `max_cte`
+  if ( std::abs(cte) > std::abs(max_cte) ) {
+    max_cte = cte;
+  }
+
   // Never again 'first'
   first_update = false;
 }
@@ -53,6 +59,12 @@ void PID::updateError(double cte) {
 double PID::getTotalError() {
 
   return total_error;
+}
+
+
+double PID::getMaxCTE() {
+
+  return max_cte;
 }
 
 

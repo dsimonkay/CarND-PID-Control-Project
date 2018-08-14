@@ -23,6 +23,9 @@ class PID {
   double steering;
   double throttle;
 
+  // Storing the CTE with the biggest magnitude
+  double max_cte;
+
 public:
   /*
    * Errors
@@ -62,6 +65,11 @@ public:
    * Calculate the total PID error.
    */
   double getTotalError();
+
+  /*
+   * Getter function for `max_cte`
+   */
+  double getMaxCTE();
 
   /*
    * Calculate the steering value.
