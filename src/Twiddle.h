@@ -40,7 +40,7 @@ class Twiddle {
 
   // Step size for parameter change. It will used as a multiplier for increasing/decreasing
   // the value of a parameter in the form of adding to or subtracting from 1.
-  const double DELTA_PARAM_CHANGE = 0.02;
+  const double DELTA_PARAM_CHANGE = 0.01;
 
   // Nunber of runs / loops done by the algorithm
   unsigned int loop_count;
@@ -64,7 +64,7 @@ public:
 
   // If the CTE ever becomes bigger than the limit defined here, we'll break the current twiddle-session,
   // reset the simulator and start over the loop.
-  static constexpr double CTE_LIMIT = 2.85;
+  static constexpr double CTE_LIMIT = 2.8;
 
   /*
    * Constructor.
@@ -81,9 +81,9 @@ public:
    */
   Twiddle(bool is_active,
           double Kp, double Ki, double Kd,
-          double delta_Kp = 0.02,
+          double delta_Kp = 0.01,
           double delta_Ki = 0.0005,
-          double delta_Kd = 0.3,
+          double delta_Kd = 0.2,
           unsigned int max_steps = 1100,
           double tolerance = 0.001);
 

@@ -161,10 +161,26 @@ int Twiddle::check(PID &pid, double cte) {
   loop_error = pid.getTotalError();
 
 
-  // Breaking the current twiddle loop in case the current CTE is simply too big
-  // (=the vehicle probably has driven off-track).
-  if ( std::abs(cte) > CTE_LIMIT ) {
+  // Checking whether we've reached the desired tolerance level
+  double delta_params_sum = std::accumulate(delta_params.begin(), delta_params.end(), 0.0);
+  if ( delta_params_sum <= tolerance ) {
 
+    // That was it. https://media.giphy.com/media/8g63zqQ5RPt60/giphy.gif
+    time_t now;
+    time(&now);
+    double twiddle_time = difftime(now, twiddle_start);
+
+    // Debug output
+    std::cout << std::endl << "Twiddle finished in " << twiddle_time << " seconds." << std::endl;
+    std::cout << "Best parameters:\n\tKp: " << best_params[0] <<
+                                 "\n\tKi: " << best_params[1] <<
+                                 "\n\tKd: " << best_params[2] << std::endl << std::endl;
+    return FINISHED;
+
+  } else if ( std::abs(cte) > CTE_LIMIT ) {
+
+    // Breaking the current twiddle loop in case the current CTE is simply too big
+    // (=the vehicle probably has driven off-track).
     std::cout << " *** CTE (" << cte << ") exceeds allowed limit; leaving twiddle loop." << std::endl;
     processFailure();
 
@@ -176,23 +192,6 @@ int Twiddle::check(PID &pid, double cte) {
 
   // Have we just arrived to the end of a loop?
   if ( step_count > max_steps ) {
-
-    // Checking whether we've reached the desired tolerance level
-    double delta_params_sum = std::accumulate(delta_params.begin(), delta_params.end(), 0.0);
-    if ( delta_params_sum <= tolerance ) {
-
-      // That was it. https://media.giphy.com/media/8g63zqQ5RPt60/giphy.gif
-      time_t now;
-      time(&now);
-      double twiddle_time = difftime(now, twiddle_start);
-
-      // Debug output
-      std::cout << std::endl << "Twiddle finished in " << twiddle_time << " seconds." << std::endl;
-      std::cout << "Best parameters:\n\tKp: " << best_params[0] <<
-                                   "\n\tKi: " << best_params[1] <<
-                                   "\n\tKd: " << best_params[2] << std::endl << std::endl;
-      return FINISHED;
-    }
 
     // Let's examine the resulting total error
     if ( loop_error < best_error_so_far ) {
@@ -208,10 +207,8 @@ int Twiddle::check(PID &pid, double cte) {
       parameter_increased = true;
 
       // Debug output
-      std::cout << " ** Found new best parameters:  [Kp, Ki, Kd]: [" << best_params[0] <<
-                                   ", " << best_params[1] << ", " << best_params[2] << "]" << std::endl;
-
-
+      std::cout << " --- Found new best parameters:  [Kp, Ki, Kd]: [" << best_params[0] << ", "
+                                           << best_params[1] << ", " << best_params[2] << "]" << std::endl;
     } else {
       processFailure();
     }

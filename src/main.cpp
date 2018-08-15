@@ -19,9 +19,14 @@ int main(int argc, char* argv[]) {
 
   // Initializing the P, I and D coefficients. These can be overridden by command line parameters "-Kp", "-Ki" and "-Kd"
   // Example: user@localhost:~/CarND-PID-Control-Project/build$ ./pid -Kp 0.04 -Ki 0.001 -Kd 1.4 --twiddle
-  double Kp = 0.04;
+
+  // double Kp = 0.04;
+  // double Ki = 0.001;
+  // double Kd = 1.4;
+
+  double Kp = 0.05;
   double Ki = 0.001;
-  double Kd = 1.4;
+  double Kd = 1.2;
 
   // Processing command line parameters
   for( int i = 1;  i < argc;  i++ ) {
@@ -103,7 +108,8 @@ int main(int argc, char* argv[]) {
 
           } else {
             // basic debug output
-            std::cout << "CTE, steering, throttle:   " << cte << ",  " << steering << ",  " << throttle << std::endl;
+            std::cout << "Max.CTE so far   current CTE   steering   throttle    ---    " << pid.getMaxCTE() << "   " <<
+                                           cte << "   " << steering << "   " << throttle << std::endl;
           }
 
           json msgJson;
