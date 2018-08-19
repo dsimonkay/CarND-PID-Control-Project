@@ -24,9 +24,17 @@ int main(int argc, char* argv[]) {
   // double Ki = 0.001;
   // double Kd = 1.4;
 
-  double Kp = 0.05;
-  double Ki = 0.001;
-  double Kd = 1.2;
+  // double Kp = 0.05;
+  // double Ki = 0.001;
+  // double Kd = 1.2;
+
+  // double Kp = 0.05;
+  // double Ki = 0.003;
+  // double Kd = 1.4;
+
+  double Kp = 0.0655369;
+  double Ki = 0.00399;
+  double Kd = 1.49544;
 
   // Processing command line parameters
   for( int i = 1;  i < argc;  i++ ) {
